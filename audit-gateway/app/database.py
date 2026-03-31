@@ -121,13 +121,23 @@ class ClickHouseClient:
             return
         
         import time
+        from datetime import datetime
             
         data = []
         for log in logs:
+            # 处理时间戳 - 支持字符串和 datetime 对象
+            timestamp = log['timestamp']
+            received_at = log.get('received_at')
+            
+            if isinstance(timestamp, str):
+                timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            if isinstance(received_at, str):
+                received_at = datetime.fromisoformat(received_at.replace('Z', '+00:00'))
+            
             data.append((
                 log['request_id'],
-                log['timestamp'],
-                log.get('received_at'),
+                timestamp,
+                received_at,
                 log['provider'],
                 log['model'],
                 log.get('stream', False),
