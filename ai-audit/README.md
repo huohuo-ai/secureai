@@ -25,10 +25,10 @@ chmod +x start.sh
 
 ```bash
 # 1. 构建并启动
-docker-compose up -d --build
+docker compose up -d --build
 
 # 2. 查看日志
-docker-compose logs -f
+docker compose logs -f
 
 # 3. 访问 http://localhost:8000
 ```
@@ -85,23 +85,23 @@ ai-audit/
 
 ```bash
 # 启动
-docker-compose up -d
+docker compose up -d
 
 # 停止
-docker-compose down
+docker compose down
 
 # 重启
-docker-compose restart
+docker compose restart
 
 # 查看日志
-docker-compose logs -f
+docker compose logs -f
 
 # 重新构建
-docker-compose up -d --build
+docker compose up -d --build
 
 # 删除数据（重置）
 rm -rf data/
-docker-compose down
+docker compose down
 ```
 
 ## 数据持久化

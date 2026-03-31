@@ -7,6 +7,10 @@ WORKDIR /app
 ENV DOCKER_ENV=1
 ENV PYTHONUNBUFFERED=1
 
+# 使用国内镜像源
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ \
+    && pip config set install.trusted-host mirrors.aliyun.com
+
 # 安装依赖
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

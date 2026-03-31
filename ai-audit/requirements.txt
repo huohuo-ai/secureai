@@ -1,5 +1,16 @@
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-aiosqlite>=0.19.0
-python-multipart>=0.0.6
-itsdangerous>=2.1.0
+# AI 审计平台依赖
+# Python 3.11+
+
+# Web 框架
+fastapi>=0.104.0,<0.120.0
+uvicorn[standard]>=0.24.0,<0.30.0
+
+# 数据库
+aiosqlite>=0.19.0,<0.21.0
+
+# Session 和表单
+python-multipart>=0.0.6,<0.1.0
+itsdangerous>=2.1.0,<3.0.0
+
+# Pydantic 数据验证（FastAPI 依赖）
+pydantic>=2.0.0,<3.0.0
