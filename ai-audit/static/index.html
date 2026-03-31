@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 审计平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- 头部导航 -->
+    <header class="header">
+        <div class="header-content">
+            <h1>🛡️ AI 审计平台</h1>
+            <nav class="header-nav">
+                <a href="#" data-tab="dashboard" class="active">📊 仪表盘</a>
+                <a href="#" data-tab="logs">📝 审计日志</a>
+                <a href="#" data-tab="users">👥 用户分析</a>
+                <a href="#" data-tab="risk">⚠️ 风险分析</a>
+            </nav>
+            <div class="header-user">
+                <span>admin</span>
+                <a href="/api/logout">退出</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="main">
+        <!-- 仪表盘 -->
+        <div id="dashboard" class="tab-content active">
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="label">总调用次数（30天）</div>
+                    <div class="value" id="totalCalls">-</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="label">总成本（USD）</div>
+                    <div class="value" id="totalCost">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">活跃用户</div>
+                    <div class="value" id="uniqueUsers">-</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="label">总 Token 消耗</div>
+                    <div class="value" id="totalTokens">-</div>
+                </div>
+            </div>
+
+            <!-- 图表区域 -->
+            <div class="two-col">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">风险等级分布</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="riskChart">
+                            <div class="loading">加载中...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">供应商使用占比</span>
+                    </div>
+                    <div class="card-body" id="providerChart">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">30 天调用趋势</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="trendChart" width="500" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">热门行为标签</span>
+                    </div>
+                    <div class="card-body" id="topTags">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">部门使用排行 TOP5</span>
+                </div>
+                <div class="card-body" id="deptRanking">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 审计日志 -->
+        <div id="logs" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">审计日志查询</span>
+                </div>
+                <div class="card-body">
+                    <!-- 筛选栏 -->
+                    <div class="filter-bar">
+                        <select id="filterRisk">
+                            <option value="">所有风险等级</option>
+                            <option value="low">低风险</option>
+                            <option value="medium">中风险</option>
+                            <option value="high">高风险</option>
+                            <option value="critical">严重</option>
+                        </select>
+                        <select id="filterDept">
+                            <option value="">所有部门</option>
+                            <option value="研发部">研发部</option>
+                            <option value="产品部">产品部</option>
+                            <option value="市场部">市场部</option>
+                            <option value="运营部">运营部</option>
+                            <option value="设计部">设计部</option>
+                            <option value="财务部">财务部</option>
+                        </select>
+                        <select id="filterProvider">
+                            <option value="">所有供应商</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="claude">Claude</option>
+                            <option value="qwen">通义千问</option>
+                            <option value="baidu">文心一言</option>
+                        </select>
+                        <input type="text" id="filterUser" placeholder="用户名">
+                        <input type="text" id="filterKeyword" placeholder="关键词搜索">
+                        <button onclick="loadLogs()">查询</button>
+                    </div>
+
+                    <!-- 数据表格 -->
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>用户</th>
+                                <th>部门</th>
+                                <th>风险等级</th>
+                                <th>行为标签</th>
+                                <th>模型</th>
+                                <th>Token</th>
+                                <th>成本</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr><td colspan="8" class="loading">加载中...</td></tr>
+                        </tbody>
+                    </table>
+
+                    <!-- 分页 -->
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户分析 -->
+        <div id="users" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">用户活跃度排行 TOP10</span>
+                </div>
+                <div class="card-body" id="usersList">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 风险分析 -->
+        <div id="risk" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">最新风险事件（High/Critical）</span>
+                </div>
+                <div class="card-body" id="riskEvents">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

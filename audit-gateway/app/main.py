@@ -35,11 +35,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Session 配置（演示用，使用随机 secret）
+# Session 配置（演示用，固定 secret）
 app.add_middleware(
     SessionMiddleware,
-    secret_key=secrets.token_urlsafe(32),
-    max_age=3600 * 8  # 8小时过期
+    secret_key="demo-secret-key-for-ai-audit-gateway-2024",
+    max_age=3600 * 24,  # 24小时过期
+    same_site="lax",
+    https_only=False  # 允许 HTTP（演示环境）
 )
 
 # CORS 配置
