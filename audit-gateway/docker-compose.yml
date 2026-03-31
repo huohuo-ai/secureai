@@ -60,6 +60,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./generate_demo.py:/app/generate_demo.py:ro
     command: >
       sh -c "
         echo 'Waiting for ClickHouse to be ready...' &&
