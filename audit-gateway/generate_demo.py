@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 AI 审计网关 - Demo 数据生成脚本
-使用方法: docker-compose exec audit-gateway python generate_demo.py
+独立版本，不依赖 app 模块
 """
 
 import random
@@ -9,14 +9,15 @@ import string
 import json
 from datetime import datetime, timedelta
 from uuid import uuid4
-import sys
+from clickhouse_driver import Client
 import os
 
-# 将 app 目录加入路径
-sys.path.insert(0, '/app')
-
-from app.database import ch_client
-from app.config import settings
+# ClickHouse 配置
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
+CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", "9000"))
+CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DATABASE", "ai_audit")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
 
 # 模拟数据池
 DEPARTMENTS = [
@@ -175,40 +176,32 @@ def generate_audit_log(timestamp):
     has_image = random.random() < 0.08
     
     return {
-        "v": "1.0",
         "request_id": str(uuid4()),
-        "timestamp": timestamp.isoformat(),
-        "received_at": (timestamp + timedelta(milliseconds=random.randint(5, 50))).isoformat(),
+        "timestamp": timestamp,
+        "received_at": timestamp + timedelta(milliseconds=random.randint(5, 50)),
         "provider": provider,
         "model": model,
         "stream": random.random() < 0.4,
-        "user": {
-            "user_id": user_info["user_id"],
-            "department": user_info["department"],
-            "project": user_info["project"],
-            "client_ip": f"10.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(1, 254)}",
-            "user_agent": random.choice([
-                "Python/3.11 aiohttp/3.8",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Cursor/0.40.0",
-            ]),
-            "key_type": "company",
-        },
-        "request": {
-            "method": "POST",
-            "path": f"/v1/{provider}/chat/completions",
-            "content_summary": {
-                "message_count": len(conversation),
-                "total_chars": total_chars,
-                "has_image": has_image,
-                "body_truncated": total_chars > 50000,
-            },
-            "contents": conversation,
-        },
-        "edge": {
-            "node": f"edge-{random.choice(['bj', 'sh', 'gz', 'sz', 'hz', 'cd'])}-{random.randint(1, 99):02d}",
-            "start_time": int(timestamp.timestamp() * 1000),
-        },
+        "user_id": user_info["user_id"],
+        "department": user_info["department"],
+        "project": user_info["project"],
+        "client_ip": f"10.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(1, 254)}",
+        "user_agent": random.choice([
+            "Python/3.11 aiohttp/3.8",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Cursor/0.40.0",
+        ]),
+        "key_type": "company",
+        "method": "POST",
+        "path": f"/v1/{provider}/chat/completions",
+        "message_count": len(conversation),
+        "total_chars": total_chars,
+        "has_image": has_image,
+        "body_truncated": total_chars > 50000,
+        "contents": json.dumps(conversation, ensure_ascii=False),
+        "edge_node": f"edge-{random.choice(['bj', 'sh', 'gz', 'sz', 'hz', 'cd'])}-{random.randint(1, 99):02d}",
+        "edge_start_time": int(timestamp.timestamp() * 1000),
+        "sampling_rate": 1.0,
         "risk_level": risk_level,
         "sensitive_words": sensitive_words,
     }
@@ -242,6 +235,92 @@ def generate_time_series_data():
     return data_points
 
 
+def insert_to_clickhouse(data):
+    """直接插入到 ClickHouse"""
+    client = Client(
+        host=CLICKHOUSE_HOST,
+        port=CLICKHOUSE_PORT,
+        database=CLICKHOUSE_DB,
+        user=CLICKHOUSE_USER,
+        password=CLICKHOUSE_PASSWORD,
+    )
+    
+    # 确保表存在
+    client.execute('''
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        request_id String,
+        timestamp DateTime64(3),
+        received_at DateTime64(3),
+        provider LowCardinality(String),
+        model LowCardinality(String),
+        stream Bool,
+        user_id String,
+        department LowCardinality(String),
+        project LowCardinality(String),
+        client_ip String,
+        user_agent String,
+        key_type LowCardinality(String),
+        method LowCardinality(String),
+        path String,
+        message_count UInt8,
+        total_chars UInt32,
+        has_image Bool,
+        body_truncated Bool,
+        contents String,
+        edge_node LowCardinality(String),
+        edge_start_time UInt64,
+        sampling_rate Float32,
+        risk_level LowCardinality(String),
+        sensitive_words Array(String)
+    ) ENGINE = MergeTree()
+    PARTITION BY toYYYYMMDD(timestamp)
+    ORDER BY (timestamp, user_id, request_id)
+    TTL timestamp + INTERVAL 1 YEAR
+    SETTINGS index_granularity = 8192
+    ''')
+    
+    # 准备数据
+    rows = []
+    for item in data:
+        rows.append((
+            item["request_id"],
+            item["timestamp"],
+            item["received_at"],
+            item["provider"],
+            item["model"],
+            item["stream"],
+            item["user_id"],
+            item["department"],
+            item["project"],
+            item["client_ip"],
+            item["user_agent"],
+            item["key_type"],
+            item["method"],
+            item["path"],
+            item["message_count"],
+            item["total_chars"],
+            item["has_image"],
+            item["body_truncated"],
+            item["contents"],
+            item["edge_node"],
+            item["edge_start_time"],
+            item["sampling_rate"],
+            item["risk_level"],
+            item["sensitive_words"],
+        ))
+    
+    # 分批插入
+    batch_size = 1000
+    total = len(rows)
+    
+    for i in range(0, total, batch_size):
+        batch = rows[i:i+batch_size]
+        client.execute("INSERT INTO audit_logs VALUES", batch)
+        print(f"   已插入 {min(i+batch_size, total)}/{total}")
+    
+    print(f"\n✅ 成功插入 {total} 条测试数据！")
+
+
 def print_statistics(data):
     total = len(data)
     print(f"\n总记录数: {total}")
@@ -249,7 +328,7 @@ def print_statistics(data):
     print("\n按部门分布:")
     dept_count = {}
     for item in data:
-        dept = item["user"]["department"]
+        dept = item["department"]
         dept_count[dept] = dept_count.get(dept, 0) + 1
     for dept, count in sorted(dept_count.items(), key=lambda x: -x[1]):
         pct = count / total * 100
@@ -282,20 +361,14 @@ def print_statistics(data):
 def main():
     print("🚀 AI 审计网关 - Demo 数据生成器")
     print("="*60)
+    print(f"ClickHouse: {CLICKHOUSE_HOST}:{CLICKHOUSE_PORT}")
     
     print("\n1. 生成测试数据...")
     data = generate_time_series_data()
     print(f"   生成 {len(data)} 条记录")
     
     print("\n2. 插入到 ClickHouse...")
-    
-    # 分批插入
-    batch_size = 1000
-    total = len(data)
-    for i in range(0, total, batch_size):
-        batch = data[i:i+batch_size]
-        ch_client.insert_audit_logs(batch)
-        print(f"   已插入 {min(i+batch_size, total)}/{total}")
+    insert_to_clickhouse(data)
     
     print_statistics(data)
     
