@@ -587,12 +587,16 @@
                 el.style.background = '#f6ffed';
                 el.style.borderColor = '#b7eb8f';
                 el.style.color = '#52c41a';
+            } else if (type === 'warning') {
+                el.style.background = '#fffbe6';
+                el.style.borderColor = '#ffe58f';
+                el.style.color = '#faad14';
             } else {
                 el.style.background = '#fff1f0';
                 el.style.borderColor = '#ffa39e';
                 el.style.color = '#cf1322';
             }
-            setTimeout(() => el.style.display = 'none', 3000);
+            setTimeout(() => el.style.display = 'none', 5000);
         }
         
         function switchTab(tabName) {
@@ -609,21 +613,33 @@
         
         async function apiRequest(path, options = {}) {
             const url = state.apiBase.replace(/\/$/, '') + path;
-            const res = await fetch(url, {
-                ...options,
-                headers: {
-                    'X-Admin-Token': state.adminToken,
-                    'Content-Type': 'application/json',
-                    ...options.headers
+            console.log('API Request:', url);
+            
+            try {
+                const res = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'X-Admin-Token': state.adminToken,
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                
+                console.log('API Response:', res.status, res.statusText);
+                
+                if (!res.ok) {
+                    const errText = await res.text();
+                    console.error('API Error:', errText);
+                    throw new Error(`HTTP ${res.status}: ${errText || res.statusText}`);
                 }
-            });
-            
-            if (!res.ok) {
-                const err = await res.text();
-                throw new Error(err || `HTTP ${res.status}`);
+                
+                const data = await res.json();
+                console.log('API Data:', data);
+                return data;
+            } catch (err) {
+                console.error('Request failed:', err);
+                throw err;
             }
-            
-            return res.json();
         }
         
         function formatNumber(num) {
@@ -671,14 +687,29 @@
                 const data = await apiRequest('/api/v1/stats/dashboard');
                 state.dashboardData = data;
                 
+                // 检查是否有数据
+                const hasData = data.summary && data.summary.total_requests > 0;
+                
+                if (!hasData) {
+                    document.getElementById('providerStats').innerHTML = '<div class="empty">暂无数据，请检查数据是否已导入<br><br>提示：运行 docker-compose exec audit-gateway python generate_demo.py</div>';
+                    document.getElementById('deptStats').innerHTML = '<div class="empty">暂无数据</div>';
+                    document.getElementById('totalRequests').textContent = '0';
+                    document.getElementById('uniqueUsers').textContent = '0';
+                    document.getElementById('totalChars').textContent = '0';
+                    document.getElementById('estimatedCost').textContent = '$0';
+                    drawTrendChart([]);
+                    showError('暂无数据，请导入演示数据', 'warning');
+                    return;
+                }
+                
                 // 更新统计卡片
-                document.getElementById('totalRequests').textContent = formatNumber(data.summary.total_requests);
-                document.getElementById('uniqueUsers').textContent = formatNumber(data.summary.unique_users);
-                document.getElementById('totalChars').textContent = formatNumber(data.summary.total_input_chars);
-                document.getElementById('estimatedCost').textContent = '$' + data.summary.estimated_cost_usd;
+                document.getElementById('totalRequests').textContent = formatNumber(data.summary.total_requests || 0);
+                document.getElementById('uniqueUsers').textContent = formatNumber(data.summary.unique_users || 0);
+                document.getElementById('totalChars').textContent = formatNumber(data.summary.total_input_chars || 0);
+                document.getElementById('estimatedCost').textContent = '$' + (data.summary.estimated_cost_usd || 0);
                 
                 // 更新供应商分布
-                const providerHtml = Object.entries(data.by_provider)
+                const providerHtml = Object.entries(data.by_provider || {})
                     .map(([k, v]) => `
                         <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
                             <span>${getProviderTag(k)}</span>
@@ -688,7 +719,7 @@
                 document.getElementById('providerStats').innerHTML = providerHtml || '<div class="empty">暂无数据</div>';
                 
                 // 更新部门分布
-                const deptHtml = data.by_department
+                const deptHtml = (data.by_department || [])
                     .slice(0, 10)
                     .map(d => `
                         <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
@@ -702,9 +733,10 @@
                 document.getElementById('deptStats').innerHTML = deptHtml || '<div class="empty">暂无数据</div>';
                 
                 // 绘制趋势图
-                drawTrendChart(data.time_series);
+                drawTrendChart(data.time_series || []);
                 
             } catch (err) {
+                console.error('Dashboard error:', err);
                 showError('加载仪表盘失败: ' + err.message);
             }
         }

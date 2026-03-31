@@ -103,16 +103,23 @@ async def get_dashboard_stats(
     estimated_tokens = total_chars / 4
     cost_estimate = (estimated_tokens / 1000000) * 20
     
+    # 处理 None 值（当没有数据时）
+    def safe_int(val):
+        return int(val) if val is not None else 0
+    
+    def safe_float(val):
+        return float(val) if val is not None else 0.0
+    
     return {
         "period": {
-            "start": start_time.isoformat(),
-            "end": end_time.isoformat()
+            "start": start_time.isoformat() if start_time else None,
+            "end": end_time.isoformat() if end_time else None
         },
         "summary": {
-            "total_requests": basic[0],
-            "unique_users": basic[1],
-            "unique_departments": basic[2],
-            "total_input_chars": basic[3],
+            "total_requests": safe_int(basic[0]),
+            "unique_users": safe_int(basic[1]),
+            "unique_departments": safe_int(basic[2]),
+            "total_input_chars": safe_int(basic[3]),
             "estimated_tokens": int(estimated_tokens),
             "estimated_cost_usd": round(cost_estimate, 2)
         },
