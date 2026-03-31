@@ -12,19 +12,46 @@ class ClickHouseClient:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance.client = Client(
-                host=settings.CLICKHOUSE_HOST,
-                port=settings.CLICKHOUSE_PORT,
-                database=settings.CLICKHOUSE_DATABASE,
-                user=settings.CLICKHOUSE_USER,
-                password=settings.CLICKHOUSE_PASSWORD,
-                settings={
-                    'max_execution_time': 30,
-                    'max_block_size': 100000
-                }
-            )
-            cls._instance.init_tables()
+            cls._instance._connect_with_retry()
         return cls._instance
+    
+    def _connect_with_retry(self, max_retries=10, delay=2):
+        """带重试的连接机制"""
+        import time
+        
+        for i in range(max_retries):
+            try:
+                logger.info(f"Connecting to ClickHouse (attempt {i+1}/{max_retries})...")
+                self.client = Client(
+                    host=settings.CLICKHOUSE_HOST,
+                    port=settings.CLICKHOUSE_PORT,
+                    database=settings.CLICKHOUSE_DATABASE,
+                    user=settings.CLICKHOUSE_USER,
+                    password=settings.CLICKHOUSE_PASSWORD,
+                    settings={
+                        'max_execution_time': 30,
+                        'max_block_size': 100000
+                    },
+                    # 连接超时设置
+                    connect_timeout=10,
+                    send_receive_timeout=30
+                )
+                # 测试连接
+                self.client.execute('SELECT 1')
+                logger.info("ClickHouse connected successfully!")
+                self.init_tables()
+                return
+            except Exception as e:
+                logger.warning(f"ClickHouse connection failed: {e}")
+                if i < max_retries - 1:
+                    time.sleep(delay)
+                else:
+                    logger.error("Failed to connect to ClickHouse after all retries")
+                    raise
+        
+    def reconnect(self):
+        """重新连接"""
+        self._connect_with_retry()
     
     def init_tables(self):
         """初始化审计表"""
@@ -88,10 +115,12 @@ class ClickHouseClient:
         
         logger.info("ClickHouse tables initialized")
     
-    def insert_audit_logs(self, logs: list):
+    def insert_audit_logs(self, logs: list, retry=True):
         """批量插入审计日志"""
         if not logs:
             return
+        
+        import time
             
         data = []
         for log in logs:
@@ -122,10 +151,24 @@ class ClickHouseClient:
                 log.get('sensitive_words', [])
             ))
         
-        self.client.execute(
-            'INSERT INTO audit_logs VALUES',
-            data
-        )
+        max_retries = 3 if retry else 1
+        for i in range(max_retries):
+            try:
+                self.client.execute(
+                    'INSERT INTO audit_logs VALUES',
+                    data
+                )
+                return True
+            except Exception as e:
+                logger.error(f"Insert failed (attempt {i+1}/{max_retries}): {e}")
+                if i < max_retries - 1:
+                    try:
+                        self.reconnect()
+                        time.sleep(1)
+                    except:
+                        pass
+                else:
+                    raise
     
     def query_audit_logs(self, query_params: dict, limit: int = 100, offset: int = 0):
         """查询审计日志"""

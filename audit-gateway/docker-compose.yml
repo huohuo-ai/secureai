@@ -19,6 +19,13 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+    # 健康检查 - 确保 ClickHouse 就绪后才启动其他服务
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   # Redis 缓存
   redis:
@@ -27,6 +34,11 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # 审计网关服务
   audit-gateway:
@@ -44,9 +56,17 @@ services:
       - AUDIT_BATCH_SIZE=1000
       - AUDIT_FLUSH_INTERVAL=5
     depends_on:
-      - clickhouse
-      - redis
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for ClickHouse to be ready...' &&
+        sleep 5 &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+      "
+    restart: unless-stopped
 
 volumes:
   clickhouse_data:

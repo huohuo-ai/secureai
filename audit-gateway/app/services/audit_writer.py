@@ -75,9 +75,12 @@ class AuditWriter:
             
         except Exception as e:
             logger.error(f"Failed to write audit logs: {e}")
-            # 失败时放回缓冲区
-            if len(self.buffer) < 10000:
-                self.buffer = logs_to_write + self.buffer
+            # 失败时放回缓冲区（限制大小防止内存爆炸）
+            remaining_space = 10000 - len(self.buffer)
+            if remaining_space > 0:
+                self.buffer = logs_to_write[:remaining_space] + self.buffer
+                if len(logs_to_write) > remaining_space:
+                    logger.error(f"Dropped {len(logs_to_write) - remaining_space} logs due to buffer overflow")
     
     async def _alert_high_risk(self, log: Dict, words: List[str]):
         """高风险告警"""
