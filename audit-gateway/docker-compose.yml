@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # ClickHouse 数据库
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"  # HTTP 接口
+      - "9000:9000"  # 原生协议
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      - CLICKHOUSE_DB=ai_audit
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 审计网关服务
+  audit-gateway:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_DATABASE=ai_audit
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - REDIS_URL=redis://redis:6379/0
+      - ADMIN_TOKEN=your-secure-admin-token-change-this
+      - AUDIT_BATCH_SIZE=1000
+      - AUDIT_FLUSH_INTERVAL=5
+    depends_on:
+      - clickhouse
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+
+volumes:
+  clickhouse_data:
+  redis_data:
