@@ -1,12 +1,21 @@
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Query, Depends, Header
 from datetime import datetime, timedelta
 from typing import Optional
 from app.database import ch_client, redis_client
-from app.routers.admin import verify_admin_token
+from app.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def verify_admin_token(x_admin_token: str = Header(None)):
+    """验证管理员 Token - 演示模式：允许空 Token"""
+    if settings.ADMIN_TOKEN and settings.ADMIN_TOKEN != "your-secure-admin-token-change-this":
+        if x_admin_token != settings.ADMIN_TOKEN:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403, detail="Invalid admin token")
+    return True
 
 
 @router.get("/api/v1/stats/dashboard", dependencies=[Depends(verify_admin_token)])

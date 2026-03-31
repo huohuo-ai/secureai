@@ -10,9 +10,11 @@ router = APIRouter()
 
 
 def verify_admin_token(x_admin_token: str = Header(None)):
-    """验证管理员 Token"""
-    if x_admin_token != settings.ADMIN_TOKEN:
-        raise HTTPException(status_code=403, detail="Invalid admin token")
+    """验证管理员 Token - 演示模式：允许空 Token"""
+    # 演示模式：如果设置了 ADMIN_TOKEN 则验证，否则允许访问
+    if settings.ADMIN_TOKEN and settings.ADMIN_TOKEN != "your-secure-admin-token-change-this":
+        if x_admin_token != settings.ADMIN_TOKEN:
+            raise HTTPException(status_code=403, detail="Invalid admin token")
     return True
 
 

@@ -360,14 +360,11 @@
     </div>
     
     <div class="container">
-        <!-- 设置面板 -->
-        <div class="settings-panel">
-            <label>API 地址：</label>
-            <input type="text" id="apiBase" placeholder="http://localhost:8000" value="">
-            <label>Admin Token：</label>
-            <input type="password" id="adminToken" placeholder="输入你的 Admin Token">
-            <button onclick="saveSettings()">保存设置</button>
-            <button onclick="loadDashboard()" style="margin-left: 10px; background: #52c41a;">刷新数据</button>
+        <!-- 刷新按钮 -->
+        <div style="text-align: right; margin-bottom: 15px;">
+            <button onclick="loadDashboard(); loadLogs();" style="padding: 8px 20px; background: #52c41a; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                🔄 刷新数据
+            </button>
         </div>
         
         <!-- 错误提示 -->
@@ -544,8 +541,7 @@
     <script>
         // ==================== 全局状态 ====================
         const state = {
-            apiBase: localStorage.getItem('apiBase') || '',
-            adminToken: localStorage.getItem('adminToken') || '',
+            apiBase: '',  // 使用相对路径，自动适配当前域名
             currentPage: 1,
             pageSize: 20,
             totalItems: 0,
@@ -554,30 +550,12 @@
         
         // ==================== 初始化 ====================
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('apiBase').value = state.apiBase;
-            document.getElementById('adminToken').value = state.adminToken;
-            
-            if (state.apiBase && state.adminToken) {
-                loadDashboard();
-            }
+            // 页面加载时自动加载数据
+            loadDashboard();
+            loadLogs();
         });
         
         // ==================== 工具函数 ====================
-        function saveSettings() {
-            state.apiBase = document.getElementById('apiBase').value.trim();
-            state.adminToken = document.getElementById('adminToken').value.trim();
-            
-            if (!state.apiBase || !state.adminToken) {
-                showError('请填写完整的 API 地址和 Admin Token');
-                return;
-            }
-            
-            localStorage.setItem('apiBase', state.apiBase);
-            localStorage.setItem('adminToken', state.adminToken);
-            
-            showError('设置已保存', 'success');
-            loadDashboard();
-        }
         
         function showError(msg, type = 'error') {
             const el = document.getElementById('errorMsg');
@@ -603,7 +581,10 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             
-            event.target.classList.add('active');
+            // 处理直接调用和事件调用
+            let target = event ? event.target : document.querySelector(`.tab[onclick*="${tabName}"]`);
+            if (target) target.classList.add('active');
+            
             document.getElementById(tabName + 'Tab').classList.add('active');
             
             if (tabName === 'users') {
@@ -612,14 +593,14 @@
         }
         
         async function apiRequest(path, options = {}) {
-            const url = state.apiBase.replace(/\/$/, '') + path;
+            // 使用相对路径，自动适配当前域名
+            const url = path;
             console.log('API Request:', url);
             
             try {
                 const res = await fetch(url, {
                     ...options,
                     headers: {
-                        'X-Admin-Token': state.adminToken,
                         'Content-Type': 'application/json',
                         ...options.headers
                     }
@@ -678,10 +659,6 @@
         
         // ==================== 仪表盘 ====================
         async function loadDashboard() {
-            if (!state.apiBase || !state.adminToken) {
-                showError('请先保存设置');
-                return;
-            }
             
             try {
                 const data = await apiRequest('/api/v1/stats/dashboard');
@@ -815,11 +792,6 @@
         
         // ==================== 审计日志 ====================
         async function loadLogs(page = 1) {
-            if (!state.apiBase || !state.adminToken) {
-                showError('请先保存设置');
-                return;
-            }
-            
             state.currentPage = page;
             
             const params = new URLSearchParams();
@@ -927,11 +899,6 @@
         
         // ==================== 用户分析 ====================
         async function loadTopUsers() {
-            if (!state.apiBase || !state.adminToken) {
-                showError('请先保存设置');
-                return;
-            }
-            
             const days = document.getElementById('userTimeRange').value;
             
             try {
