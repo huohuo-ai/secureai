@@ -1,0 +1,17 @@
+# 不需要打包进镜像的文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.git/
+.gitignore
+README.md
+*.md
+audit.db
+data/

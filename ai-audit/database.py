@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import os
 
-DB_PATH = "audit.db"
+import os
+DB_PATH = os.getenv("DB_PATH", "/app/data/audit.db")
 
 
 async def init_db():

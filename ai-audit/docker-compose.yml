@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  ai-audit:
+    build: .
+    container_name: ai-audit-platform
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data  # 持久化 SQLite 数据库
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

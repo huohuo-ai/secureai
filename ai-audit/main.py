@@ -279,6 +279,10 @@ async def startup():
 if __name__ == "__main__":
     import uvicorn
     import asyncio
+    import os
+    
+    # 确保数据目录存在
+    os.makedirs("/app/data", exist_ok=True)
     
     # 初始化数据库
     asyncio.run(startup())
@@ -296,9 +300,11 @@ if __name__ == "__main__":
     
     asyncio.run(check_and_generate())
     
-    # 打开浏览器
-    print("🌐 正在打开浏览器...")
-    webbrowser.open("http://localhost:8000")
+    # 非容器环境自动打开浏览器
+    if not os.getenv("DOCKER_ENV"):
+        print("🌐 正在打开浏览器...")
+        webbrowser.open("http://localhost:8000")
     
     # 启动服务
+    print("🚀 服务启动: http://0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
