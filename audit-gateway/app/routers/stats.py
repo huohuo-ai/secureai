@@ -1,29 +1,30 @@
-from fastapi import APIRouter, Query, Depends, Header
+from fastapi import APIRouter, Query, Depends, Request, HTTPException
 from datetime import datetime, timedelta
 from typing import Optional
 from app.database import ch_client, redis_client
-from app.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def verify_admin_token(x_admin_token: str = Header(None)):
-    """验证管理员 Token - 演示模式：允许空 Token"""
-    if settings.ADMIN_TOKEN and settings.ADMIN_TOKEN != "your-secure-admin-token-change-this":
-        if x_admin_token != settings.ADMIN_TOKEN:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=403, detail="Invalid admin token")
-    return True
+def get_current_user(request: Request):
+    """获取当前登录用户"""
+    user = request.session.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
 
 
-@router.get("/api/v1/stats/dashboard", dependencies=[Depends(verify_admin_token)])
+@router.get("/api/v1/stats/dashboard")
 async def get_dashboard_stats(
+    request: Request,
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None
 ):
     """获取仪表盘统计数据"""
+    get_current_user(request)
+    
     if not end_time:
         end_time = datetime.utcnow()
     if not start_time:
@@ -112,12 +113,9 @@ async def get_dashboard_stats(
     estimated_tokens = total_chars / 4
     cost_estimate = (estimated_tokens / 1000000) * 20
     
-    # 处理 None 值（当没有数据时）
+    # 处理 None 值
     def safe_int(val):
         return int(val) if val is not None else 0
-    
-    def safe_float(val):
-        return float(val) if val is not None else 0.0
     
     return {
         "period": {
@@ -139,13 +137,16 @@ async def get_dashboard_stats(
     }
 
 
-@router.get("/api/v1/stats/users/top", dependencies=[Depends(verify_admin_token)])
+@router.get("/api/v1/stats/users/top")
 async def get_top_users(
+    request: Request,
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
     limit: int = Query(20, ge=1, le=100)
 ):
     """获取活跃用户排行"""
+    get_current_user(request)
+    
     if not end_time:
         end_time = datetime.utcnow()
     if not start_time:

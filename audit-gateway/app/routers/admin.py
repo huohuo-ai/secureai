@@ -1,25 +1,24 @@
-from fastapi import APIRouter, Query, Depends, HTTPException, Header
+from fastapi import APIRouter, Query, Depends, Request, HTTPException
 from typing import Optional
 from datetime import datetime, timedelta
 from app.database import ch_client
-from app.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def verify_admin_token(x_admin_token: str = Header(None)):
-    """验证管理员 Token - 演示模式：允许空 Token"""
-    # 演示模式：如果设置了 ADMIN_TOKEN 则验证，否则允许访问
-    if settings.ADMIN_TOKEN and settings.ADMIN_TOKEN != "your-secure-admin-token-change-this":
-        if x_admin_token != settings.ADMIN_TOKEN:
-            raise HTTPException(status_code=403, detail="Invalid admin token")
-    return True
+def get_current_user(request: Request):
+    """获取当前登录用户"""
+    user = request.session.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
 
 
-@router.get("/api/v1/admin/logs", dependencies=[Depends(verify_admin_token)])
+@router.get("/api/v1/admin/logs")
 async def query_logs(
+    request: Request,
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
     user_id: Optional[str] = None,
@@ -33,6 +32,9 @@ async def query_logs(
     """
     查询审计日志（管理后台）
     """
+    # 验证登录
+    get_current_user(request)
+    
     # 默认查询最近24小时
     if not end_time:
         end_time = datetime.utcnow()
@@ -67,9 +69,15 @@ async def query_logs(
     }
 
 
-@router.get("/api/v1/admin/users/{user_id}/history", dependencies=[Depends(verify_admin_token)])
-async def get_user_history(user_id: str, days: int = Query(7, ge=1, le=30)):
+@router.get("/api/v1/admin/users/{user_id}/history")
+async def get_user_history(
+    request: Request,
+    user_id: str,
+    days: int = Query(7, ge=1, le=30)
+):
     """获取用户历史记录"""
+    get_current_user(request)
+    
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(days=days)
     
@@ -89,11 +97,16 @@ async def get_user_history(user_id: str, days: int = Query(7, ge=1, le=30)):
     }
 
 
-@router.delete("/api/v1/admin/logs/purge", dependencies=[Depends(verify_admin_token)])
-async def purge_old_logs(before_days: int = Query(365, ge=30)):
+@router.delete("/api/v1/admin/logs/purge")
+async def purge_old_logs(
+    request: Request,
+    before_days: int = Query(365, ge=30)
+):
     """
     清理旧日志（ClickHouse TTL 会自动处理，此接口用于紧急清理）
     """
+    get_current_user(request)
+    
     return {
         "message": "ClickHouse uses TTL for automatic cleanup. Manual purge not recommended.",
         "ttl_days": 365

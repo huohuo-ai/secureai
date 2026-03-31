@@ -355,8 +355,16 @@
 </head>
 <body>
     <div class="header">
-        <h1>🛡️ AI 审计网关管理平台</h1>
-        <p>监控和管理企业内部的 AI 模型调用行为</p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>🛡️ AI 审计网关管理平台</h1>
+                <p>监控和管理企业内部的 AI 模型调用行为</p>
+            </div>
+            <div style="text-align: right;">
+                <span style="opacity: 0.9; margin-right: 15px;">👤 admin</span>
+                <a href="/logout" style="color: white; opacity: 0.8; text-decoration: none; font-size: 14px;">退出登录</a>
+            </div>
+        </div>
     </div>
     
     <div class="container">
@@ -541,7 +549,6 @@
     <script>
         // ==================== 全局状态 ====================
         const state = {
-            apiBase: '',  // 使用相对路径，自动适配当前域名
             currentPage: 1,
             pageSize: 20,
             totalItems: 0,
@@ -554,6 +561,19 @@
             loadDashboard();
             loadLogs();
         });
+        
+        // 检查是否已登录
+        async function checkLogin() {
+            try {
+                const res = await fetch('/api/user');
+                if (!res.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (err) {
+                console.error('Check login failed:', err);
+            }
+        }
+        checkLogin();
         
         // ==================== 工具函数 ====================
         
@@ -593,13 +613,13 @@
         }
         
         async function apiRequest(path, options = {}) {
-            // 使用相对路径，自动适配当前域名
             const url = path;
             console.log('API Request:', url);
             
             try {
                 const res = await fetch(url, {
                     ...options,
+                    credentials: 'include',  // 携带 cookie
                     headers: {
                         'Content-Type': 'application/json',
                         ...options.headers
@@ -607,6 +627,12 @@
                 });
                 
                 console.log('API Response:', res.status, res.statusText);
+                
+                // 如果未登录，跳转到登录页
+                if (res.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
                 
                 if (!res.ok) {
                     const errText = await res.text();
