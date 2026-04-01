@@ -3,161 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 审计平台</title>
+    <title>AI 审计平台 - 增强版</title>
     <link rel="stylesheet" href="/static/style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- 头部导航 -->
     <header class="header">
         <div class="header-content">
-            <h1>🛡️ AI 审计平台</h1>
+            <div class="logo">
+                <span class="logo-icon">🛡️</span>
+                <span class="logo-text">AI 审计平台</span>
+                <span class="version">v2.0</span>
+            </div>
             <nav class="header-nav">
-                <a href="#" data-tab="dashboard" class="active">📊 仪表盘</a>
-                <a href="#" data-tab="logs">📝 审计日志</a>
-                <a href="#" data-tab="users">👥 用户分析</a>
-                <a href="#" data-tab="risk">⚠️ 风险分析</a>
+                <a href="#" data-tab="dashboard" class="active">
+                    <span class="nav-icon">📊</span>仪表盘
+                </a>
+                <a href="#" data-tab="logs">
+                    <span class="nav-icon">📝</span>审计日志
+                </a>
+                <a href="#" data-tab="users">
+                    <span class="nav-icon">👥</span>用户分析
+                </a>
+                <a href="#" data-tab="risk">
+                    <span class="nav-icon">⚠️</span>风险分析
+                </a>
+                <a href="#" data-tab="cost">
+                    <span class="nav-icon">💰</span>成本分析
+                </a>
+                <a href="#" data-tab="realtime">
+                    <span class="nav-icon">📡</span>实时监控
+                </a>
             </nav>
-            <div class="header-user">
-                <span>admin</span>
-                <a href="/api/logout">退出</a>
+            <div class="header-actions">
+                <button class="btn-export" onclick="exportData()">📥 导出数据</button>
+                <div class="user-info">
+                    <span class="user-avatar">👤</span>
+                    <span class="user-name">admin</span>
+                    <a href="/api/logout" class="logout">退出</a>
+                </div>
             </div>
         </div>
     </header>
 
     <!-- 主内容区 -->
     <main class="main">
+        <!-- 实时数据悬浮窗 -->
+        <div class="float-stats" id="floatStats">
+            <div class="float-item">
+                <span class="float-label">24h 调用</span>
+                <span class="float-value" id="floatCalls">-</span>
+            </div>
+            <div class="float-item">
+                <span class="float-label">24h 成本</span>
+                <span class="float-value" id="floatCost">-</span>
+            </div>
+            <div class="float-item danger">
+                <span class="float-label">风险事件</span>
+                <span class="float-value" id="floatRisk">-</span>
+            </div>
+        </div>
+
         <!-- 仪表盘 -->
         <div id="dashboard" class="tab-content active">
             <!-- 统计卡片 -->
             <div class="stats-grid">
                 <div class="stat-card primary">
-                    <div class="label">总调用次数（30天）</div>
-                    <div class="value" id="totalCalls">-</div>
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-info">
+                        <div class="stat-label">总调用次数（30天）</div>
+                        <div class="stat-value" id="totalCalls">-</div>
+                        <div class="stat-change" id="callsChange">↗ +12.5%</div>
+                    </div>
                 </div>
                 <div class="stat-card danger">
-                    <div class="label">总成本（USD）</div>
-                    <div class="value" id="totalCost">-</div>
+                    <div class="stat-icon">💵</div>
+                    <div class="stat-info">
+                        <div class="stat-label">总成本（USD）</div>
+                        <div class="stat-value" id="totalCost">-</div>
+                        <div class="stat-change" id="costChange">↗ +8.3%</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="label">活跃用户</div>
-                    <div class="value" id="uniqueUsers">-</div>
+                <div class="stat-card success">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <div class="stat-label">活跃用户</div>
+                        <div class="stat-value" id="uniqueUsers">-</div>
+                        <div class="stat-change">日活</div>
+                    </div>
                 </div>
                 <div class="stat-card warning">
-                    <div class="label">总 Token 消耗</div>
-                    <div class="value" id="totalTokens">-</div>
+                    <div class="stat-icon">🔤</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Token 消耗</div>
+                        <div class="stat-value" id="totalTokens">-</div>
+                        <div class="stat-change">输入+输出</div>
+                    </div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-info">
+                        <div class="stat-label">风险事件</div>
+                        <div class="stat-value" id="riskCount">-</div>
+                        <div class="stat-change" id="riskRate">占比 --%</div>
+                    </div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-icon">🏷️</div>
+                    <div class="stat-info">
+                        <div class="stat-label">行为标签</div>
+                        <div class="stat-value" id="tagCount">8</div>
+                        <div class="stat-change">已识别</div>
+                    </div>
                 </div>
             </div>
 
             <!-- 图表区域 -->
-            <div class="two-col">
-                <div class="card">
+            <div class="dashboard-grid">
+                <div class="card chart-large">
                     <div class="card-header">
-                        <span class="card-title">风险等级分布</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="riskChart">
-                            <div class="loading">加载中...</div>
+                        <h3>📊 调用趋势（30天）</h3>
+                        <div class="chart-controls">
+                            <button onclick="changeTrendGroup('hour')">小时</button>
+                            <button onclick="changeTrendGroup('day')" class="active">天</button>
+                            <button onclick="changeTrendGroup('week')">周</button>
                         </div>
                     </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">供应商使用占比</span>
-                    </div>
-                    <div class="card-body" id="providerChart">
-                        <div class="loading">加载中...</div>
+                    <div class="card-body">
+                        <canvas id="trendChart"></canvas>
                     </div>
                 </div>
-            </div>
 
-            <div class="two-col">
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">30 天调用趋势</span>
+                        <h3>🎯 风险等级分布</h3>
                     </div>
                     <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="trendChart" width="500" height="300"></canvas>
-                        </div>
+                        <canvas id="riskChart"></canvas>
+                        <div id="riskLegend" class="chart-legend"></div>
                     </div>
                 </div>
+
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">热门行为标签</span>
+                        <h3>🏢 供应商占比</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="providerChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>⏰ 24小时分布</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🏷️ 热门行为标签</h3>
                     </div>
                     <div class="card-body" id="topTags">
                         <div class="loading">加载中...</div>
                     </div>
                 </div>
-            </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">部门使用排行 TOP5</span>
-                </div>
-                <div class="card-body" id="deptRanking">
-                    <div class="loading">加载中...</div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🏆 部门使用排行 TOP5</h3>
+                    </div>
+                    <div class="card-body" id="deptRanking">
+                        <div class="loading">加载中...</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- 审计日志 -->
         <div id="logs" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">审计日志查询</span>
-                </div>
-                <div class="card-body">
-                    <!-- 筛选栏 -->
-                    <div class="filter-bar">
-                        <select id="filterRisk">
-                            <option value="">所有风险等级</option>
-                            <option value="low">低风险</option>
-                            <option value="medium">中风险</option>
-                            <option value="high">高风险</option>
-                            <option value="critical">严重</option>
+            <div class="filter-panel">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>风险等级</label>
+                        <select id="filterRisk" multiple>
+                            <option value="">全部</option>
+                            <option value="low">🟢 低风险</option>
+                            <option value="medium">🟡 中风险</option>
+                            <option value="high">🟠 高风险</option>
+                            <option value="critical">🔴 严重</option>
                         </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>部门</label>
                         <select id="filterDept">
-                            <option value="">所有部门</option>
+                            <option value="">全部部门</option>
                             <option value="研发部">研发部</option>
                             <option value="产品部">产品部</option>
                             <option value="市场部">市场部</option>
                             <option value="运营部">运营部</option>
                             <option value="设计部">设计部</option>
                             <option value="财务部">财务部</option>
+                            <option value="人事部">人事部</option>
                         </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>供应商</label>
                         <select id="filterProvider">
-                            <option value="">所有供应商</option>
+                            <option value="">全部</option>
                             <option value="openai">OpenAI</option>
                             <option value="claude">Claude</option>
                             <option value="qwen">通义千问</option>
                             <option value="baidu">文心一言</option>
+                            <option value="azure">Azure</option>
                         </select>
-                        <input type="text" id="filterUser" placeholder="用户名">
-                        <input type="text" id="filterKeyword" placeholder="关键词搜索">
-                        <button onclick="loadLogs()">查询</button>
                     </div>
+                    <div class="filter-group">
+                        <label>行为标签</label>
+                        <select id="filterTag">
+                            <option value="">全部</option>
+                            <option value="高频用户">高频用户</option>
+                            <option value="异常消耗">异常消耗</option>
+                            <option value="测试行为">测试行为</option>
+                            <option value="深夜使用">深夜使用</option>
+                            <option value="敏感操作">敏感操作</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>搜索</label>
+                        <input type="text" id="filterKeyword" placeholder="用户名/内容">
+                    </div>
+                    <button class="btn-primary" onclick="loadLogs()">🔍 查询</button>
+                    <button class="btn-secondary" onclick="resetFilters()">重置</button>
+                </div>
+            </div>
 
-                    <!-- 数据表格 -->
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>时间</th>
-                                <th>用户</th>
-                                <th>部门</th>
-                                <th>风险等级</th>
-                                <th>行为标签</th>
-                                <th>模型</th>
-                                <th>Token</th>
-                                <th>成本</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logsTableBody">
-                            <tr><td colspan="8" class="loading">加载中...</td></tr>
-                        </tbody>
-                    </table>
-
-                    <!-- 分页 -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>📝 审计日志</h3>
+                    <span class="badge" id="logsCount">共 0 条</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>用户</th>
+                                    <th>部门</th>
+                                    <th>风险等级</th>
+                                    <th>行为标签</th>
+                                    <th>供应商</th>
+                                    <th>模型</th>
+                                    <th>Token</th>
+                                    <th>成本</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <tr><td colspan="10" class="loading">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="pagination" id="pagination"></div>
                 </div>
             </div>
@@ -165,28 +276,170 @@
 
         <!-- 用户分析 -->
         <div id="users" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">用户活跃度排行 TOP10</span>
+            <div class="filter-panel">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>排序方式</label>
+                        <select id="userSortBy" onchange="loadUsers()">
+                            <option value="calls">调用次数</option>
+                            <option value="cost">消费金额</option>
+                            <option value="risk">风险等级</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="card-body" id="usersList">
-                    <div class="loading">加载中...</div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>👥 用户活跃度排行 TOP20</h3>
+                    </div>
+                    <div class="card-body" id="usersList">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📊 部门对比</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="deptCompareChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- 风险分析 -->
         <div id="risk" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">最新风险事件（High/Critical）</span>
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>⚠️ 风险汇总</h3>
+                    </div>
+                    <div class="card-body" id="riskSummary">
+                        <div class="loading">加载中...</div>
+                    </div>
                 </div>
-                <div class="card-body" id="riskEvents">
-                    <div class="loading">加载中...</div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🔥 最新风险事件</h3>
+                    </div>
+                    <div class="card-body" id="riskEvents">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+
+                <div class="card chart-large">
+                    <div class="card-header">
+                        <h3>📈 风险趋势（按风险等级）</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="riskTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 成本分析 -->
+        <div id="cost" class="tab-content">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>💰 部门成本排行</h3>
+                    </div>
+                    <div class="card-body" id="costByDept">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>💵 高消费用户 TOP20</h3>
+                    </div>
+                    <div class="card-body" id="costByUser">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+
+                <div class="card chart-large">
+                    <div class="card-header">
+                        <h3>📊 成本趋势（30天）</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="costTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card chart-large">
+                    <div class="card-header">
+                        <h3>🤖 模型成本对比</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="modelCostChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 实时监控 -->
+        <div id="realtime" class="tab-content">
+            <div class="realtime-header">
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot connecting"></span>
+                    <span>正在连接...</span>
+                </div>
+                <button class="btn-primary" onclick="connectWebSocket()">重新连接</button>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📊 实时统计</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="realtime-stats" id="realtimeStats">
+                            <div class="rt-item">
+                                <span class="rt-label">24h 调用</span>
+                                <span class="rt-value" id="rtCalls">-</span>
+                            </div>
+                            <div class="rt-item">
+                                <span class="rt-label">24h 成本</span>
+                                <span class="rt-value" id="rtCost">-</span>
+                            </div>
+                            <div class="rt-item danger">
+                                <span class="rt-label">风险事件</span>
+                                <span class="rt-value" id="rtRisk">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card chart-large">
+                    <div class="card-header">
+                        <h3>📈 实时趋势</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="realtimeChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- 详情弹窗 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔍 调用详情</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 动态内容 -->
+            </div>
+        </div>
+    </div>
 
     <script src="/static/app.js"></script>
 </body>
