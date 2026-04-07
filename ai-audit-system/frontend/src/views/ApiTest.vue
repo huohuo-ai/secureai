@@ -189,14 +189,7 @@ const testCases = {
   },
   code: {
     scenario: 'code',
-    content: ````python
-def process_user_data(user_id, password):
-    # 处理用户数据
-    API_KEY = "sk-1234567890abcdef"
-    query = f"SELECT * FROM users WHERE id = {user_id}"
-    return db.execute(query)
-```
-请帮我检查这段代码是否有问题？`
+    content: "```python\ndef process_user_data(user_id, password):\n    # 处理用户数据\n    API_KEY = \"sk-1234567890abcdef\"\n    query = f\"SELECT * FROM users WHERE id = {user_id}\"\n    return db.execute(query)\n```\n请帮我检查这段代码是否有问题？"
   },
   business: {
     scenario: 'code',
