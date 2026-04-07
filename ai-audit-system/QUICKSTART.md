@@ -17,7 +17,7 @@ cd ai-audit-system
 ./start.sh
 
 # 或手动启动
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 访问系统
@@ -31,7 +31,7 @@ docker-compose up -d
 
 ```bash
 # 生成2000条测试数据（包含各种场景）
-docker-compose exec backend python generate_test_data.py
+docker compose exec backend python generate_test_data.py
 ```
 
 ## 📊 功能体验指南
@@ -117,29 +117,29 @@ ai-audit-system/
 │   └── generate_test_data.py  # 测试数据生成
 ├── frontend/             # Vue3前端
 │   └── src/views/        # 页面组件
-└── docker-compose.yml    # 编排配置
+└── docker compose.yml    # 编排配置
 ```
 
 ## 🔧 常用命令
 
 ```bash
 # 查看日志
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 
 # 重启服务
-docker-compose restart
+docker compose restart
 
 # 停止服务
-docker-compose down
+docker compose down
 
 # 删除数据重新启动
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 
 # 进入容器
-docker-compose exec backend bash
-docker-compose exec postgres psql -U postgres -d ai_audit
+docker compose exec backend bash
+docker compose exec postgres psql -U postgres -d ai_audit
 ```
 
 ## 🐛 故障排查
@@ -147,24 +147,24 @@ docker-compose exec postgres psql -U postgres -d ai_audit
 ### 数据库连接失败
 ```bash
 # 检查数据库状态
-docker-compose ps
-docker-compose logs postgres
+docker compose ps
+docker compose logs postgres
 
 # 重置数据库
-docker-compose down -v
-docker-compose up -d postgres
+docker compose down -v
+docker compose up -d postgres
 sleep 10
-docker-compose up -d backend
+docker compose up -d backend
 ```
 
 ### 前端无法访问
 ```bash
 # 检查前端日志
-docker-compose logs frontend
+docker compose logs frontend
 
 # 重新构建前端
-docker-compose build frontend
-docker-compose up -d frontend
+docker compose build frontend
+docker compose up -d frontend
 ```
 
 ### 端口被占用
@@ -174,7 +174,7 @@ lsof -i :5173
 lsof -i :8000
 lsof -i :5432
 
-# 修改端口（在 docker-compose.yml 中）
+# 修改端口（在 docker compose.yml 中）
 ```
 
 ## 📚 了解更多

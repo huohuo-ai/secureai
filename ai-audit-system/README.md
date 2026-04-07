@@ -42,12 +42,12 @@
 cd ai-audit-system
 
 # 启动所有服务
-docker-compose up -d
+docker compose up -d
 
 # 等待数据库初始化完成（约30秒）
 
 # 生成测试数据
-docker-compose exec backend python generate_test_data.py
+docker compose exec backend python generate_test_data.py
 
 # 访问系统
 # 前端: http://localhost:5173
