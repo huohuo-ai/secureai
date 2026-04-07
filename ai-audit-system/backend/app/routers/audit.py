@@ -206,7 +206,7 @@ async def get_audit_log_detail(
         "client_ip": log.client_ip,
         "user_agent": log.user_agent,
         "session_id": log.session_id,
-        "metadata": log.metadata,
+        "metadata": log.log_metadata,
         "data_residency_compliant": log.data_residency_compliant,
         "gdpr_compliant": log.gdpr_compliant,
         "risk_detections": [

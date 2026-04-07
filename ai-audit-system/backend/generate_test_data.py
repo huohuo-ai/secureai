@@ -304,7 +304,7 @@ async def generate_audit_logs(session: AsyncSession, num_records: int = 1000):
             client_ip=f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0",
             session_id=f"sess_{uuid.uuid4().hex[:12]}",
-            metadata={"source": "test_data", "version": "1.0"},
+            log_metadata={"source": "test_data", "version": "1.0"},
             data_residency_compliant=random.choice([True, True, True, False]),  # 75% 合规
             gdpr_compliant=True
         )

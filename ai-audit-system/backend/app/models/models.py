@@ -95,7 +95,7 @@ class AuditLog(Base):
     data_residency_compliant = Column(Boolean, default=True)
     gdpr_compliant = Column(Boolean, default=True)
     
-    metadata = Column(JSON, default=dict)
+    log_metadata = Column(JSON, default=dict, name="metadata")
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

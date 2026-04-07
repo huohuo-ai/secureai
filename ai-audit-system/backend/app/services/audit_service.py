@@ -82,7 +82,7 @@ class AuditService:
             client_ip=client_ip,
             user_agent=user_agent,
             session_id=session_id,
-            metadata=metadata or {},
+            log_metadata=metadata or {},
             data_residency_compliant=self._check_data_residency(provider),
             gdpr_compliant=True
         )
