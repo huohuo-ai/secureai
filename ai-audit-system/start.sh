@@ -7,6 +7,8 @@ set -e
 echo "=========================================="
 echo "     AI模型调用审计系统启动脚本"
 echo "=========================================="
+echo ""
+echo "📌 已配置国内镜像加速: pip(阿里云) / npm(淘宝) / apt(阿里云)"
 
 # 检查Docker是否安装
 if ! command -v docker &> /dev/null; then
@@ -23,8 +25,8 @@ fi
 
 # 启动服务
 echo ""
-echo "正在启动服务..."
-docker compose up -d
+echo "正在启动服务 (首次构建可能需要 3-5 分钟)..."
+docker compose up -d --build
 
 # 等待数据库初始化
 echo ""

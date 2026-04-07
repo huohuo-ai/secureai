@@ -1,0 +1,19 @@
+# 国内镜像加速配置
+# 使用方法: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+
+services:
+  backend:
+    build:
+      additional_contexts:
+        # 如有需要可配置构建镜像源
+        {}
+    environment:
+      # pip 国内镜像环境变量
+      - PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+      - PIP_TRUSTED_HOST=mirrors.aliyun.com
+
+  frontend:
+    build:
+      args:
+        # npm 国内镜像
+        - NPM_REGISTRY=https://registry.npmmirror.com

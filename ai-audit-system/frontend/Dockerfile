@@ -2,6 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# 使用国内npm镜像源
+RUN npm config set registry https://registry.npmmirror.com
+
 # 安装依赖
 COPY package.json .
 RUN npm install
